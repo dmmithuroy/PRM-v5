@@ -1,3 +1,4 @@
-python-telegram-bot[webhooks]
+python-telegram-bot==13.15
 firebase-admin
-flask[async]
+flask
+python-dotenv
