@@ -1,3 +1,4 @@
 pyTelegramBotAPI
 firebase-admin
 flask
+gunicorn
