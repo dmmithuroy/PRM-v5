@@ -1,9 +1,7 @@
-import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-import firebase_admin
-from firebase_admin import credentials, firestore
-import flask
 import os
+import flask
+from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
 
 # --- আপনার তথ্য ---
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -11,7 +9,10 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 YOUR_WEB_APP_URL = "https://your-user-facing-webapp-url.com" 
 # ------------------------------------
 
-# Firebase ইনিশিয়ালাইজ করুন
+# Firebase সেটআপ (আপনার আগের কোড থেকে)
+import firebase_admin
+from firebase_admin import credentials, firestore
+
 try:
     cred = credentials.Certificate("serviceAccountKey.json")
     firebase_admin.initialize_app(cred)
@@ -21,39 +22,33 @@ except Exception as e:
     db = None
     print(f"Firebase চালু করতে সমস্যা হয়েছে: {e}")
 
-# বট এবং ফ্লাস্ক অ্যাপ অবজেক্ট তৈরি করুন
-bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
+# বট এবং ডিসপ্যাচার ইনিশিয়ালাইজ করুন
+bot = Bot(token=BOT_TOKEN)
+dispatcher = Dispatcher(bot, None, use_context=True)
 app = flask.Flask(__name__)
 
-
-# --- Webhook রুট (টেলিগ্রাম এখানে POST রিকোয়েস্ট পাঠাবে) ---
+# --- Webhook রুট ---
 @app.route(f'/{BOT_TOKEN}', methods=['POST'])
-def webhook():
-    if flask.request.headers.get('content-type') == 'application/json':
-        json_string = flask.request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_string)
-        bot.process_new_updates([update])
-        return '', 200
-    else:
-        flask.abort(403)
+def webhook_handler():
+    update = Update.de_json(flask.request.get_json(force=True), bot)
+    dispatcher.process_update(update)
+    return 'ok'
 
-# --- সাধারণ রুট (সার্ভার চালু আছে কিনা তা দেখার জন্য) ---
 @app.route('/')
 def index():
-    return "Bot is alive using Webhook!"
+    return 'Bot is alive with python-telegram-bot!'
 
-
-# --- Telegram Bot এর মূল কোড ---
+# --- Telegram Bot এর ফাংশন ---
 def create_webapp_keyboard():
-    keyboard = InlineKeyboardMarkup()
-    web_app_button = InlineKeyboardButton(text="▶️ Open App", web_app=WebAppInfo(url=YOUR_WEB_APP_URL))
-    keyboard.add(web_app_button)
+    keyboard = InlineKeyboardMarkup.from_button(
+        InlineKeyboardButton(text="▶️ Open App", web_app=WebAppInfo(url=YOUR_WEB_APP_URL))
+    )
     return keyboard
 
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    chat_id = message.chat.id
-    user_name = message.from_user.first_name
+def start(update, context):
+    user = update.effective_user
+    chat_id = user.id
+    user_name = user.first_name
     print(f"'/start' কমান্ড পাওয়া গেছে: {chat_id} ({user_name}) থেকে")
     
     welcome_message = f"👋 Hello, {user_name}!\nWelcome! Click below to start."
@@ -67,20 +62,20 @@ def send_welcome(message):
     except Exception as e:
         print(f"Firebase থেকে ওয়েলকাম মেসেজ আনতে সমস্যা হয়েছে: {e}")
 
-    bot.send_message(chat_id, welcome_message, reply_markup=create_webapp_keyboard())
+    context.bot.send_message(
+        chat_id=chat_id,
+        text=welcome_message,
+        reply_markup=create_webapp_keyboard()
+    )
 
+# --- ডিসপ্যাচারে হ্যান্ডলার যোগ করা ---
+dispatcher.add_handler(CommandHandler('start', start))
 
 # --- Webhook সেট করার অংশ (সার্ভার চালু হওয়ার পর শুধু একবার চলবে) ---
-# এই অংশটি gunicorn দিয়ে চালালে সঠিকভাবে কাজ করে
 if __name__ != '__main__':
-    # Render সার্ভিসের URL টি স্বয়ংক্রিয়ভাবে পেতে
     RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
     if RENDER_EXTERNAL_URL:
         WEBHOOK_URL = f"{RENDER_EXTERNAL_URL}/{BOT_TOKEN}"
         print(f"Webhook সেট করা হচ্ছে: {WEBHOOK_URL}")
-        bot.remove_webhook()
-        # Webhook সেট করার জন্য ছোট একটি দেরি দেওয়া ভালো
-        import time
-        time.sleep(1) 
         bot.set_webhook(url=WEBHOOK_URL)
         print("Webhook সফলভাবে সেট হয়েছে।")
