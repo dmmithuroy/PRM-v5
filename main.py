@@ -6,7 +6,7 @@ from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
 # --- আপনার তথ্য ---
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 # নিচের URL টি আপনার USER.txt এবং ADMIN.txt যে লিঙ্কে হোস্ট করা আছে, সেই লিঙ্ক হবে
-YOUR_WEB_APP_URL = "https://your-user-facing-webapp-url.com" 
+YOUR_WEB_APP_URL = "https://prm-v5.blogspot.com/" 
 # ------------------------------------
 
 # Firebase সেটআপ (আপনার আগের কোড থেকে)
@@ -79,3 +79,4 @@ if __name__ != '__main__':
         print(f"Webhook সেট করা হচ্ছে: {WEBHOOK_URL}")
         bot.set_webhook(url=WEBHOOK_URL)
         print("Webhook সফলভাবে সেট হয়েছে।")
+
