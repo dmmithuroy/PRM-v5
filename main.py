@@ -1,7 +1,7 @@
 import os
 import flask
 from telegram import Bot, Update, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
+from telegram.ext import Dispatcher, CommandHandler
 
 # --- আপনার তথ্য ---
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -79,4 +79,5 @@ if __name__ != '__main__':
         print(f"Webhook সেট করা হচ্ছে: {WEBHOOK_URL}")
         bot.set_webhook(url=WEBHOOK_URL)
         print("Webhook সফলভাবে সেট হয়েছে।")
+
 
